@@ -88,13 +88,13 @@ jobs:
         run: docker build -t $IMAGE_NAME .
 
       - name: Save Docker Image
-        run: docker save $IMAGE_NAME > $IMAGE_NAME.tar
+        run: docker save -o scalabit-api.tar scalabit-api
 
       - name: Upload Docker Image artifact
         uses: actions/upload-artifact@v4
         with:
           name: docker-image
-          path: $IMAGE_NAME.tar
+          path: scalabit-api.tar
 
   deploy:
     name: Deploy to Minikube
