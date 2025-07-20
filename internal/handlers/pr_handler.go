@@ -1,54 +1,38 @@
 package handlers
 
 import (
-	"context"
+	"strconv"
 
 	"github.com/digaso/scalabit/internal/utils"
-
 	"github.com/gin-gonic/gin"
-
 	"github.com/google/go-github/v57/github"
-
 	"net/http"
-
-	"strconv"
 )
 
 func ListPRs(c *gin.Context) {
-
-	ctx := context.Background()
-
-	repo := c.Param("repo")
+	ctx := c.Request.Context()
 
 	owner := c.Param("owner")
+	repo := c.Param("repo")
 
-	limitStr := c.DefaultQuery("limit", "10") // Default limit to 10 if not provided
-
+	limitStr := c.DefaultQuery("limit", "10")
 	limit, err := strconv.Atoi(limitStr)
-
 	if err != nil || limit <= 0 {
-
 		limit = 10
-
 	}
 
 	opts := &github.PullRequestListOptions{
-
-		ListOptions: github.ListOptions{PerPage: limit},
-
 		State: "open",
+		ListOptions: github.ListOptions{
+			PerPage: limit,
+		},
 	}
 
 	prs, _, err := client.PullRequests.List(ctx, owner, repo, opts)
-
 	if err != nil {
-
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-
 		return
-
 	}
 
 	c.JSON(http.StatusOK, utils.CleanPRs(prs))
-
 }
