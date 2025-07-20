@@ -29,5 +29,8 @@ func main() {
 	router.DELETE("/repos", handlers.DeleteRepo)
 	router.GET("/repos/prs/:owner/:repo", handlers.ListPRs)
 
-	router.Run(":8080")
+	if err := router.Run(":8080"); err != nil {
+		log.Fatalf("Failed to run server: %v", err)
+	}
+
 }
