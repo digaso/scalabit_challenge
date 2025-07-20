@@ -11,18 +11,18 @@ import (
 
 	"github.com/digaso/scalabit/internal/handlers"
 	"github.com/gin-gonic/gin"
-	"github.com/joho/godotenv"
+	//"github.com/joho/godotenv"
 	"github.com/stretchr/testify/assert"
 )
 
 var router *gin.Engine
 
 func TestMain(m *testing.M) {
-	// Load .env once
-	err := godotenv.Load("../.env")
-	if err != nil {
-		log.Println("No .env file found or error loading .env")
-	}
+	// Load .env once (locally development)
+	// err := godotenv.Load("../.env")
+	// if err != nil {
+	// 	log.Println("No .env file found or error loading .env")
+	// }
 
 	token := os.Getenv("TOKEN")
 	if token == "" {
