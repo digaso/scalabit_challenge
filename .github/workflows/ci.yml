@@ -132,7 +132,7 @@ jobs:
       - name: Create Kubernetes Deployment and Service
         run: |
           set -e
-          cat <<EOF | kubectl apply -f -
+          cat <<EOF | tee k8s.yaml
           apiVersion: apps/v1
           kind: Deployment
           metadata:
