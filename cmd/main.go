@@ -1,12 +1,11 @@
 package main
 
 import (
-	"log"
-	"os"
-
 	"github.com/digaso/scalabit/internal/handlers"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+	"log"
+	"os"
 )
 
 func main() {
