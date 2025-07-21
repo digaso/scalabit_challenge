@@ -95,6 +95,7 @@ jobs:
         with:
           name: docker-image
           path: scalabit-api.tar
+
   deploy:
     name: Deploy to Minikube
     runs-on: ubuntu-latest
@@ -122,6 +123,12 @@ jobs:
 
       - name: Start Minikube
         run: minikube start --driver=docker
+
+      - name: Set kubectl context to Minikube
+        run: kubectl config use-context minikube
+
+      - name: Verify cluster status
+        run: kubectl get nodes
 
       - name: Load Docker Image into Minikube
         run: minikube image load scalabit-api.tar
@@ -166,10 +173,20 @@ jobs:
       - name: Verify Deployment
         run: kubectl get pods -o wide
 
-      - name: Wait for pod to be ready
+      - name: Wait for pod to be ready robustly
         run: |
           echo "Waiting for scalabit-api pod to be ready..."
-          kubectl wait --for=condition=ready pod -l app=scalabit-api --timeout=120s
+          for i in {1..24}; do
+            POD=$(kubectl get pods -l app=scalabit-api -o jsonpath='{.items[0].metadata.name}')
+            if [ -n "$POD" ]; then
+              kubectl wait --for=condition=ready pod "$POD" --timeout=5s && exit 0
+            fi
+            echo "Pod not ready yet, retrying in 5s..."
+            sleep 5
+          done
+          echo "Pod did not become ready in time."
+          exit 1
+
       - name: Expose Service URL
         run: |
           URL=$(minikube service scalabit-api-service --url)
