@@ -27,10 +27,6 @@ jobs:
         with:
           go-version: "1.22"
 
-      - name: Setup environment variables
-        run: |
-          echo "GITHUB_TOKEN=${{ secrets.TOKEN }}" >> $GITHUB_ENV
-
       - name: Get dependencies
         run: go mod tidy
 
@@ -124,11 +120,8 @@ jobs:
       - name: Start Minikube
         run: minikube start --driver=docker
 
-      - name: Set kubectl context to Minikube
+      - name: Use Minikube context
         run: kubectl config use-context minikube
-
-      - name: Verify cluster status
-        run: kubectl get nodes
 
       - name: Load Docker Image into Minikube
         run: minikube image load scalabit-api.tar
@@ -153,6 +146,7 @@ jobs:
                 containers:
                   - name: scalabit-api
                     image: scalabit-api
+                    imagePullPolicy: Never
                     ports:
                       - containerPort: 8080
           ---
@@ -173,19 +167,10 @@ jobs:
       - name: Verify Deployment
         run: kubectl get pods -o wide
 
-      - name: Wait for pod to be ready robustly
+      - name: Wait for Deployment rollout
         run: |
-          echo "Waiting for scalabit-api pod to be ready..."
-          for i in {1..24}; do
-            POD=$(kubectl get pods -l app=scalabit-api -o jsonpath='{.items[0].metadata.name}')
-            if [ -n "$POD" ]; then
-              kubectl wait --for=condition=ready pod "$POD" --timeout=5s && exit 0
-            fi
-            echo "Pod not ready yet, retrying in 5s..."
-            sleep 5
-          done
-          echo "Pod did not become ready in time."
-          exit 1
+          echo "Waiting for scalabit-api deployment to complete..."
+          kubectl rollout status deployment/scalabit-api --timeout=120s
 
       - name: Expose Service URL
         run: |
