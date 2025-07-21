@@ -10,99 +10,57 @@ on:
 
 env:
   IMAGE_NAME: scalabit-api:latest
-  TOKEN: ${{ secrets.TOKEN }}
-  GITHUB_USER: digaso
 
 jobs:
   test:
-    name: Run Tests
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Go
-        uses: actions/setup-go@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
           go-version: "1.22"
-
-      - name: Get dependencies
-        run: go mod tidy
-
-      - name: Run tests
-        run: go test ./tests/... -v
+      - run: go mod tidy
+      - run: go test ./tests/... -v
 
   lint:
-    name: Lint Code
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
-
-      - name: Setup Go
-        uses: actions/setup-go@v5
+      - uses: actions/setup-go@v5
         with:
           go-version: "1.22"
-
-      - name: Install golangci-lint
-        uses: golangci/golangci-lint-action@v6
-
-      - name: Run Linter
-        run: golangci-lint run ./...
+      - uses: golangci/golangci-lint-action@v6
+      - run: golangci-lint run ./...
 
   security:
-    name: Security Check
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
-
-      - name: Setup Go
-        uses: actions/setup-go@v5
+      - uses: actions/setup-go@v5
         with:
           go-version: "1.22"
-
-      - name: Install gosec
-        run: go install github.com/securego/gosec/v2/cmd/gosec@latest
-
-      - name: Run gosec
-        run: gosec ./...
+      - run: go install github.com/securego/gosec/v2/cmd/gosec@latest
+      - run: gosec ./...
 
   build:
-    name: Build Docker Image
     runs-on: ubuntu-latest
     needs: [test, lint, security]
-
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build Docker Image
-        run: docker build -t $IMAGE_NAME .
-
-      - name: Save Docker Image
-        run: docker save -o scalabit-api.tar $IMAGE_NAME
-
-      - name: Upload Docker Image artifact
-        uses: actions/upload-artifact@v4
+      - uses: docker/setup-buildx-action@v3
+      - run: docker build -t $IMAGE_NAME .
+      - run: docker save -o scalabit-api.tar $IMAGE_NAME
+      - uses: actions/upload-artifact@v4
         with:
           name: docker-image
           path: scalabit-api.tar
 
   deploy:
-    name: Deploy to Minikube
     runs-on: ubuntu-latest
     needs: build
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Download Docker Image artifact
-        uses: actions/download-artifact@v4
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
         with:
           name: docker-image
 
@@ -123,15 +81,13 @@ jobs:
       - name: Use Minikube context
         run: kubectl config use-context minikube
 
-      - name: Load Docker Image into Minikube
-        run: minikube image load $IMAGE_NAME
-
-      - name: Check Minikube Status
-        run: minikube status
-
-      - name: Create Kubernetes Deployment and Service
+      - name: Load Docker image into Minikube
         run: |
-          set -e
+          docker load -i scalabit-api.tar
+          minikube image load scalabit-api:latest
+
+      - name: Apply Kubernetes manifests
+        run: |
           cat <<EOF | tee k8s.yaml
           apiVersion: apps/v1
           kind: Deployment
@@ -149,7 +105,7 @@ jobs:
               spec:
                 containers:
                   - name: scalabit-api
-                    image: $IMAGE_NAME
+                    image: scalabit-api:latest
                     imagePullPolicy: Never
                     ports:
                       - containerPort: 8080
@@ -167,18 +123,11 @@ jobs:
                 targetPort: 8080
             type: NodePort
           EOF
-          kubectl apply -f k8s.yaml
-          kubectl get all
 
-      - name: Verify Deployment
-        run: |
-          kubectl get pods -o wide
-          kubectl describe deployment scalabit-api
-          kubectl get events --sort-by=.metadata.creationTimestamp
+          kubectl apply -f k8s.yaml
 
       - name: Wait for Deployment rollout
         run: |
-          echo "Waiting for scalabit-api deployment to complete..."
           kubectl rollout status deployment/scalabit-api --timeout=180s
 
       - name: Expose Service URL
