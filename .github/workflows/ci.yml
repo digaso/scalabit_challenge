@@ -9,7 +9,7 @@ on:
       - main
 
 env:
-  IMAGE_NAME: scalabit-api
+  IMAGE_NAME: scalabit-api:latest
   TOKEN: ${{ secrets.TOKEN }}
   GITHUB_USER: digaso
 
@@ -81,10 +81,10 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Build Docker Image
-        run: docker build -t scalabit-api .
+        run: docker build -t $IMAGE_NAME .
 
       - name: Save Docker Image
-        run: docker save -o scalabit-api.tar scalabit-api
+        run: docker save -o scalabit-api.tar $IMAGE_NAME
 
       - name: Upload Docker Image artifact
         uses: actions/upload-artifact@v4
@@ -124,7 +124,7 @@ jobs:
         run: kubectl config use-context minikube
 
       - name: Load Docker Image into Minikube
-        run: minikube image load scalabit-api
+        run: minikube image load $IMAGE_NAME
 
       - name: Check Minikube Status
         run: minikube status
@@ -149,7 +149,7 @@ jobs:
               spec:
                 containers:
                   - name: scalabit-api
-                    image: scalabit-api
+                    image: $IMAGE_NAME
                     imagePullPolicy: Never
                     ports:
                       - containerPort: 8080
@@ -171,12 +171,15 @@ jobs:
           kubectl get all
 
       - name: Verify Deployment
-        run: kubectl get pods -o wide
+        run: |
+          kubectl get pods -o wide
+          kubectl describe deployment scalabit-api
+          kubectl get events --sort-by=.metadata.creationTimestamp
 
       - name: Wait for Deployment rollout
         run: |
           echo "Waiting for scalabit-api deployment to complete..."
-          kubectl rollout status deployment/scalabit-api --timeout=120s
+          kubectl rollout status deployment/scalabit-api --timeout=180s
 
       - name: Expose Service URL
         run: |
