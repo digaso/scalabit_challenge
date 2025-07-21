@@ -81,7 +81,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Build Docker Image
-        run: docker build -t $IMAGE_NAME .
+        run: docker build -t scalabit-api .
 
       - name: Save Docker Image
         run: docker save -o scalabit-api.tar scalabit-api
@@ -124,10 +124,14 @@ jobs:
         run: kubectl config use-context minikube
 
       - name: Load Docker Image into Minikube
-        run: minikube image load scalabit-api.tar
+        run: minikube image load scalabit-api
+
+      - name: Check Minikube Status
+        run: minikube status
 
       - name: Create Kubernetes Deployment and Service
         run: |
+          set -e
           cat <<EOF | kubectl apply -f -
           apiVersion: apps/v1
           kind: Deployment
@@ -163,6 +167,8 @@ jobs:
                 targetPort: 8080
             type: NodePort
           EOF
+          kubectl apply -f k8s.yaml
+          kubectl get all
 
       - name: Verify Deployment
         run: kubectl get pods -o wide
