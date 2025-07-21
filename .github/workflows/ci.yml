@@ -166,6 +166,10 @@ jobs:
       - name: Verify Deployment
         run: kubectl get pods -o wide
 
+      - name: Wait for pod to be ready
+        run: |
+          echo "Waiting for scalabit-api pod to be ready..."
+          kubectl wait --for=condition=ready pod -l app=scalabit-api --timeout=120s
       - name: Expose Service URL
         run: |
           URL=$(minikube service scalabit-api-service --url)
