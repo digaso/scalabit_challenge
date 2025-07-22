@@ -123,13 +123,19 @@ jobs:
         run: |
           kubectl rollout status deployment/scalabit-api --timeout=180s
 
-      - name: Debug Pods and Events (on failure)
+      - name: Debug Pods and Logs (on failure)
         if: failure()
         run: |
           echo "==== Pods ===="
           kubectl get pods -o wide
+
           echo "==== Describe Pod ===="
           kubectl describe pod -l app=scalabit-api || true
+
+          echo "==== Logs ===="
+          POD_NAME=$(kubectl get pods -l app=scalabit-api -o jsonpath="{.items[0].metadata.name}")
+          kubectl logs $POD_NAME || true
+
           echo "==== Events ===="
           kubectl get events --sort-by=.metadata.creationTimestamp || true
 
