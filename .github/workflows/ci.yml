@@ -9,6 +9,7 @@ on:
       - main
 
 env:
+  TOKEN: ${{ secrets.TOKEN }}
   IMAGE_NAME: scalabit-api:latest
 
 jobs:
@@ -80,6 +81,8 @@ jobs:
         run: minikube image load scalabit-api:latest
 
       - name: Apply Kubernetes manifests
+        env:
+          TOKEN: ${{ secrets.TOKEN }}
         run: |
           cat <<EOF | tee k8s.yaml
           apiVersion: apps/v1
@@ -102,6 +105,9 @@ jobs:
                     imagePullPolicy: IfNotPresent
                     ports:
                       - containerPort: 8080
+                    env:
+                      - name: TOKEN
+                        value: "${TOKEN}"
           ---
           apiVersion: v1
           kind: Service
