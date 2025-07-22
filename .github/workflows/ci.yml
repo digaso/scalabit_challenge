@@ -120,9 +120,18 @@ jobs:
           EOF
 
           kubectl apply -f k8s.yaml
-
-      - name: Wait for Deployment rollout
-        run: kubectl rollout status deployment/scalabit-api --timeout=180s
+      - name: Debug Pods
+        run: |
+          kubectl get pods -o wide
+          kubectl describe pod -l app=scalabit-api
+          kubectl logs -l app=scalabit-api || true
+      - name: Wait and debug rollout
+        run: |
+          sleep 10
+          kubectl get pods
+          kubectl describe pod -l app=scalabit-api
+          kubectl logs -l app=scalabit-api || true
+          kubectl rollout status deployment/scalabit-api --timeout=180s
 
       - name: Expose Service URL
         run: |
