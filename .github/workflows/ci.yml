@@ -73,14 +73,11 @@ jobs:
       - name: Use Minikube context
         run: kubectl config use-context minikube
 
-      - name: Set up Docker inside Minikube
-        run: |
-          eval $(minikube docker-env)
+      - name: Build Docker image locally
+        run: docker build -t scalabit-api:latest .
 
-      - name: Build Docker image inside Minikube
-        run: |
-          docker build -t $IMAGE_NAME .
-          docker images
+      - name: Load image into Minikube
+        run: minikube image load scalabit-api:latest
 
       - name: Apply Kubernetes manifests
         run: |
@@ -122,20 +119,21 @@ jobs:
 
           kubectl apply -f k8s.yaml
 
-      - name: Debug Pods
+      - name: Wait for Deployment rollout
         run: |
-          kubectl get pods -o wide
-          kubectl describe pod -l app=scalabit-api
-          kubectl logs -l app=scalabit-api || true
-      - name: Wait and debug rollout
-        run: |
-          sleep 10
-          kubectl get pods
-          kubectl describe pod -l app=scalabit-api
-          kubectl logs -l app=scalabit-api || true
           kubectl rollout status deployment/scalabit-api --timeout=180s
+
+      - name: Debug Pods and Events (on failure)
+        if: failure()
+        run: |
+          echo "==== Pods ===="
+          kubectl get pods -o wide
+          echo "==== Describe Pod ===="
+          kubectl describe pod -l app=scalabit-api || true
+          echo "==== Events ===="
+          kubectl get events --sort-by=.metadata.creationTimestamp || true
 
       - name: Expose Service URL
         run: |
           URL=$(minikube service scalabit-api-service --url)
-          echo "Service URL: $URL"
+          echo "✅ Service URL: $URL"
