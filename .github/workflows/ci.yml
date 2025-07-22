@@ -120,6 +120,11 @@ jobs:
           EOF
 
           kubectl apply -f k8s.yaml
+
+      - name: Check docker images
+        run: |
+          minikube ssh
+          docker images
       - name: Debug Pods
         run: |
           kubectl get pods -o wide
